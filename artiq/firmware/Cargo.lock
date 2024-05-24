@@ -98,6 +98,7 @@ dependencies = [
  "log",
  "riscv",
  "smoltcp",
+ "vexriscv",
 ]
 
 [[package]]
@@ -637,6 +638,11 @@ dependencies = [
  "libc 0.1.0",
  "unwind",
 ]
+
+[[package]]
+name = "vexriscv"
+version = "0.0.3"
+source = "git+https://git.m-labs.hk/M-Labs/vexriscv-rust.git#6008a2dc0409428b7a44bd5776ca5264002746ad"
 
 [[package]]
 name = "wasi"

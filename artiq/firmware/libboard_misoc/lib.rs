@@ -14,6 +14,8 @@ mod arch;
 
 #[cfg(target_arch = "riscv32")]
 extern crate riscv;
+#[cfg(target_arch = "riscv32")]
+extern crate vexriscv;
 
 pub use arch::*;
 
