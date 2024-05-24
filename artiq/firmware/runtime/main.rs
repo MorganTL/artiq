@@ -42,6 +42,8 @@ use board_artiq::drtioaux;
 use board_artiq::drtio_routing;
 use board_artiq::{mailbox, rpc_queue};
 use proto_artiq::{mgmt_proto, moninj_proto, rpc_proto, session_proto, kernel_proto};
+#[cfg(has_wrpll)]
+use board_artiq::si549;
 #[cfg(has_drtio_eem)]
 use board_artiq::drtio_eem;
 #[cfg(has_rtio_analyzer)]
@@ -264,6 +266,8 @@ pub extern fn main() -> i32 {
         ALLOC.add_range(&mut _fheap, &mut _eheap);
 
         pmp::init_stack_guard(&_sstack_guard as *const u8 as usize);
+        #[cfg(has_wrpll)]
+        irq::enable(csr::WRPLL_INTERRUPT);
 
         logger_artiq::BufferLogger::new(&mut LOG_BUFFER[..]).register(||
             boot::start_user(startup as usize)
@@ -299,8 +303,11 @@ pub extern fn exception(regs: *const TrapFrame) {
     let pc = mepc::read();
     let cause = mcause::read().cause();
     match cause {
-        mcause::Trap::Interrupt(source) => {
-            info!("Called interrupt with {:?}", source);
+        mcause::Trap::Interrupt(_source) => {
+            #[cfg(has_wrpll)]
+            if irq::is_pending(csr::WRPLL_INTERRUPT) {
+                si549::wrpll::interrupt_handler();
+            }
         },
 
         mcause::Trap::Exception(mcause::Exception::UserEnvCall) => {
