@@ -3,6 +3,7 @@ import unittest
 from migen import *
 from misoc.cores.coaxpress.common import word_width
 from artiq.gateware.cxp_grabber.pixel import Pixel_Parser
+from artiq.gateware.cxp_grabber.core import ROI
 
 from math import ceil
 
@@ -40,23 +41,45 @@ def mono_pixelword_generator(pixel_width, x_size, y_size, white_pixel=False):
     return packet
 
 
+class DUT(Module):
+    def __init__(self, res_width):
+        parser = Pixel_Parser(res_width)
+        roi = ROI(parser.pixel_format)
+        self.submodules += parser, roi
+
+
 class Testbench:
     def __init__(self, res_width):
-        self.input = []
-        self.dut = Pixel_Parser(res_width)
+        self.dut = DUT(res_width)
 
     def write_config(self, x_size, y_size, pixel_format):
-        yield self.dut.x_size.eq(x_size)
-        yield self.dut.y_size.eq(y_size)
-        yield self.dut.pixel_format.eq(pixel_format)
+        yield self.dut.parser.x_size.eq(x_size)
+        yield self.dut.parser.y_size.eq(y_size)
+        yield self.dut.parser.pixel_format.eq(pixel_format)
         yield
 
-    def write_word(self, word):
-        yield self.dut.sink.data.eq(word)
+    def write_line(self, packet):
+        for i, word in enumerate(packet):
+            if i in [0, 1]:
+                # simulate line marker between line
+                yield
+            yield self.dut.parser.sink.data.eq(word["data"])
+            yield self.dut.parser.sink.stb.eq(1)
+            yield
+        yield self.parser.stb.eq(0)  # present accidental stb
+
+    def write_roi_cofig(self, x0, y0, x1, y1):
+        yield self.dut.roi.cfg.x0.eq(x0)
+        yield self.dut.roi.cfg.y0.eq(y0)
+        yield self.dut.roi.cfg.x1.eq(x1)
+        yield self.dut.roi.cfg.y1.eq(y1)
         yield
 
-    def fetch_pixels(self):
-        yield self.dut.source_pixel4x
+    def fetch_roi_output(self):
+        if (yield self.dut.roi.out.update) == 1:
+            return (yield self.dut.roi.out.gray)
+        else:
+            return -1
 
 
 if __name__ == "__main__":
