@@ -59,7 +59,7 @@ class Stream_Decoder(Module, AutoCSR):
         # 
         #      32+8(dchar)                                                             32 
         # sink ────/────> stream ────> buffer ────> crc checker ─────> frame header ───/───> end of line ─────> skid buffer ─────> pixel parser ─────> 4x pixel with
-        #                 arbiter                   reader                                   marker                                                    xy coordinate
+        #                 arbiter                   reader             reader                marker                                                    xy coordinate
         # 
          
         
