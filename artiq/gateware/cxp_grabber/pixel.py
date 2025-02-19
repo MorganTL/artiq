@@ -283,7 +283,7 @@ class Pixel_Parser(Module):
     def __init__(self, res_width):
         self.x_size = Signal(3 * char_width)
         self.y_size = Signal(3 * char_width)
-        self.pixel_format = Signal(2 * char_width)
+        self.pixel_format_code = Signal(2 * char_width)
 
         self.sink = Endpoint(pixelword_layout)
 
@@ -301,7 +301,7 @@ class Pixel_Parser(Module):
 
 
         # From Table 34 (CXP-001-2021)
-        pix_fmt = {
+        pixel_formats = {
             "mono8": 0x0101,
             "mono10": 0x0102,
             "mono12": 0x0103,
@@ -322,13 +322,13 @@ class Pixel_Parser(Module):
 
         # discard unknown pixel format
         mux_cases = {"default": [self.sink.ack.eq(1)]}
-        for fmt, code in pix_fmt.items():
+        for fmt, code in pixel_formats.items():
             mux_cases[code] = [
                 self.sink.connect(unpackers[fmt].sink),
                 unpackers[fmt].source.connect(tracker.sink),
             ]
 
-        self.comb += Case(self.pixel_format, mux_cases)
+        self.comb += Case(self.pixel_format_code, mux_cases)
 
         self.source_pixel4x = tracker.pixel4x
 
