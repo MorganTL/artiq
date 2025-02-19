@@ -61,7 +61,7 @@ def frame_header_generator(**kwargs):
     return header
 
 
-def mono_pixelword_generator(
+def mono_pixel_packet_generator(
     x_size,
     y_size,
     pixel_width,
