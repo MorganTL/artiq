@@ -95,10 +95,7 @@ class Testbench:
         yield
 
     def fetch_roi_output(self):
-        if (yield self.dut.roi.out.update) == 1:
-            return (yield self.dut.roi.out.count)
-        else:
-            return -1
+        return (yield self.dut.roi.out.count)
 
     def delay(self, cycle):
         for _ in range(cycle):
@@ -131,8 +128,8 @@ class TestROI(unittest.TestCase):
             yield from tb.write_frame_info(x_size, y_size, pixel_code[pixel_width])
             yield from tb.write_frame(packet)
 
-            # there is a 5 cycle between stbing the last pixel word and roi update is ready
-            for _ in range(5):
+            # there is a 6 cycle delay between stbing the last pixel word and roi update is ready
+            for _ in range(6):
                 yield
             self.assertEqual((yield from tb.fetch_roi_output()), expected_count)
 
