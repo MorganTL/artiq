@@ -1,7 +1,7 @@
 from migen import *
 from artiq.gateware.cxp_grabber.pixel import Pixel_Parser
 from artiq.gateware.cxp_grabber.core import ROI
-from artiq.gateware.test.cxp_grabber.packet_generator import mono_pixelword_generator
+from artiq.gateware.test.cxp_grabber.packet_generator import mono_pixel_packet_generator
 
 import unittest
 
@@ -68,7 +68,7 @@ class TestROI(unittest.TestCase):
 
             yield from tb.write_roi_cofig(x0, y0, x1, y1)
 
-            packet = mono_pixelword_generator(
+            packet = mono_pixel_packet_generator(
                 x_size, y_size, pixel_width, white_pixel=True, with_eol_marked=True
             )
             yield from tb.write_frame_info(x_size, y_size, pixel_code[pixel_width])
