@@ -8,13 +8,6 @@ from artiq.gateware.cxp_grabber.core import ROI
 from math import ceil
 from collections import namedtuple
 
-_pixel_code = {
-    8: 0x0101,
-    10: 0x0102,
-    12: 0x0103,
-    14: 0x0104,
-    16: 0x0105,
-}
 
 WordLayout = namedtuple("WordLayout", ["data", "k", "stb", "eop"])
 
@@ -57,7 +50,6 @@ def mono_pixelword_generator(
 
         for i in range(words_per_image_line):
             serialized = (packed & (0xFFFF_FFFF << i * word_width)) >> i * word_width
-            print(f"{serialized:#010X}")
             eop = 1 if ((i == words_per_image_line - 1) and with_eol_marked) else 0
             packet.append(
                 WordLayout(
@@ -78,6 +70,7 @@ class DUT(Module):
 class Testbench:
     def __init__(self, res_width, count_width):
         self.dut = DUT(res_width, count_width)
+        self.fragment = self.dut.get_fragment()
 
     def write_frame_info(self, x_size, y_size, pixel_code):
         yield self.dut.parser.x_size.eq(x_size)
@@ -111,29 +104,44 @@ class Testbench:
         for _ in range(cycle):
             yield
 
-    def test_roi(self, x_size, y_size, pixel_width, x0, y0, x1, y1):
-        yield from self.write_roi_cofig(x0, y0, x1, y1)
-
-        packet = mono_pixelword_generator(
-            x_size, y_size, pixel_width, white_pixel=True, with_eol_marked=True
-        )
-        yield from self.write_frame_info(x_size, y_size, _pixel_code[pixel_width])
-        yield from self.write_frame(packet)
-
-        # there is a 5 cycle between stbing the last pixel word and roi update is ready
-        yield from self.delay(5)
-        return (yield from self.fetch_roi_output())
-
     def run(self, gen):
-        run_simulation(self.dut, gen, vcd_name="sim-cxp.vcd")
+        run_simulation(self.fragment, gen, vcd_name="sim-cxp.vcd")
+
+
+class TestROI(unittest.TestCase):
+    def test_cxp_roi(self):
+        tb = Testbench(16, 31)
+
+        pixel_code = {
+            8: 0x0101,
+            10: 0x0102,
+            12: 0x0103,
+            14: 0x0104,
+            16: 0x0105,
+        }
+
+        def gen(x_size, y_size, pixel_width, x0, y0, x1, y1):
+            expected_count = (x1 - x0) * (y1 - y0) * ((2**pixel_width) - 1)
+
+            yield from tb.write_roi_cofig(x0, y0, x1, y1)
+
+            packet = mono_pixelword_generator(
+                x_size, y_size, pixel_width, white_pixel=True, with_eol_marked=True
+            )
+            yield from tb.write_frame_info(x_size, y_size, pixel_code[pixel_width])
+            yield from tb.write_frame(packet)
+
+            # there is a 5 cycle between stbing the last pixel word and roi update is ready
+            for _ in range(5):
+                yield
+            self.assertEqual((yield from tb.fetch_roi_output()), expected_count)
+
+        tb.run(gen(10, 10, 8, 0, 0, 8, 8))
+        tb.run(gen(10, 10, 10, 1, 1, 8, 8))
+        tb.run(gen(10, 10, 12, 2, 2, 8, 8))
+        tb.run(gen(10, 10, 14, 3, 3, 8, 8))
+        tb.run(gen(10, 10, 16, 4, 4, 8, 8))
 
 
 if __name__ == "__main__":
-    # mono_pixelword_generator(14, 5, 4)
-    tb = Testbench(16, 31)
-
-    def gen():
-        print((yield from tb.test_roi(10, 10, 12, 1, 1, 5, 5)))
-
-    tb.run(gen())
-    pass
+    unittest.main()
