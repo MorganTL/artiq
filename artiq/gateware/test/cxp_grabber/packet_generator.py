@@ -1,11 +1,64 @@
 from migen import *
-from misoc.cores.coaxpress.common import word_width
+from misoc.cores.coaxpress.common import char_width, KCode, word_width
+
 
 from math import ceil
 from collections import namedtuple
 
 
 WordLayout = namedtuple("WordLayout", ["data", "k", "stb", "eop"])
+
+
+def frame_header_generator(**kwargs):
+    header = [
+        WordLayout(
+            data=Replicate(KCode["stream_marker"], 4),
+            k=Replicate(1, 4),
+            stb=1,
+            eop=0,
+        ),
+        WordLayout(
+            data=Replicate(C(0x01, char_width), 4),
+            k=Replicate(0, 4),
+            stb=1,
+            eop=0,
+        ),
+    ]
+
+    header_layout = [
+        ("StreamID", char_width),
+        ("SourceTag", 2 * char_width),
+        ("Xsize", 3 * char_width),
+        ("Xoffs", 3 * char_width),  # horizontal offset in pixels
+        ("Ysize", 3 * char_width),
+        ("Yoffs", 3 * char_width),  # vertical offset in pixels
+        ("DsizeL", 3 * char_width), # number of data words per image line
+        ("PixelF", 2 * char_width),
+        ("TapG", 2 * char_width),   # tap geometry
+        ("Flags", char_width),
+    ]
+    for f in header_layout:
+        name = f[0]
+        char_len = f[1] // char_width
+        if name in kwargs:
+            # CXP use MSB when sending duplicate chars in sequence
+            bytes = kwargs.get(name).to_bytes(char_len, "big")
+            chars = [C(b, char_width) for b in bytes]
+        else:
+            chars = [C(0x00, char_width) for _ in range(char_len)]
+
+        for c in chars:
+            print(f"{c.value:#010X}")
+            header.append(
+                WordLayout(
+                    data=Replicate(c, 4),
+                    k=Replicate(0, 4),
+                    stb=1,
+                    eop=0,
+                ),
+            )
+
+    return header
 
 
 def mono_pixelword_generator(
@@ -31,13 +84,13 @@ def mono_pixelword_generator(
         # Line marker
         packet += [
             WordLayout(
-                data=C(0x7C7C7C7C, word_width),
+                data=Replicate(KCode["stream_marker"], 4),
                 k=Replicate(1, 4),
                 stb=1 if stb_line_marker else 0,
                 eop=0,
             ),
             WordLayout(
-                data=C(0x02020202, word_width),
+                data=Replicate(C(0x02, char_width), 4),
                 k=Replicate(0, 4),
                 stb=1 if stb_line_marker else 0,
                 eop=0,
@@ -54,3 +107,18 @@ def mono_pixelword_generator(
             )
 
     return packet
+
+
+if __name__ == "__main__":
+    frame_header_generator(
+        StreamID=1,
+        SourceTag=2,
+        Xsize=3,
+        # Xoffs=0,
+        # Ysize=0,
+        # Yoffs=0,
+        # DsizeL=0,
+        # PixelF=0,
+        # TapG=0,
+        # Flags=0,
+    )
