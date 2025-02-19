@@ -51,7 +51,7 @@ class Stream_Decoder(Module, AutoCSR):
         self.new_frame = CSR()
         self.x_size = CSRStatus(3*char_width)
         self.y_size = CSRStatus(3*char_width)
-        self.pixel_format = CSRStatus(2*char_width)
+        self.pixel_format_code = CSRStatus(2*char_width)
 
         # # #
          
@@ -105,15 +105,15 @@ class Stream_Decoder(Module, AutoCSR):
 
         frame_header = header_reader.header
         self.specials += [
-            MultiReg(frame_header.x_size, self.x_size.status),
-            MultiReg(frame_header.y_size, self.y_size.status),
-            MultiReg(frame_header.pixel_format, self.pixel_format.status),
+            MultiReg(frame_header.Xsize, self.x_size.status),
+            MultiReg(frame_header.Ysize, self.y_size.status),
+            MultiReg(frame_header.PixelF, self.pixel_format_code.status),
         ]
 
 
         # Mark end of line for pixel parser
         self.submodules.eol_marker = eol_marker = cdr(End_of_line_Marker())
-        self.sync.cxp_gt_rx += eol_marker.l_size.eq(header_reader.header.l_size)
+        self.sync.cxp_gt_rx += eol_marker.words_per_img_line.eq(frame_header.DsizeL)
 
         # Skid buffer to prevent pipeline stalling
         # At each linebreak, `Pixel_Parser.sink.ack` will fall for 1-2 cycle.
@@ -125,9 +125,9 @@ class Stream_Decoder(Module, AutoCSR):
 
         self.submodules.parser = parser = cdr(Pixel_Parser(res_width))
         self.sync.cxp_gt_rx += [
-            parser.x_size.eq(frame_header.x_size),
-            parser.y_size.eq(frame_header.y_size),
-            parser.pixel_format.eq(frame_header.pixel_format),
+            parser.x_size.eq(frame_header.Xsize),
+            parser.y_size.eq(frame_header.Ysize),
+            parser.pixel_format_code.eq(frame_header.PixelF),
         ]
 
         # Connecting the pipeline
