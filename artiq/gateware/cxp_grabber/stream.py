@@ -186,18 +186,18 @@ class Frame_Header_Reader(Module):
         # Table 47 (CXP-001-2021)
         n_header_chars = 23
         img_header_layout = [
-            ("stream_id", char_width),
-            ("source_tag", 2*char_width), 
-            ("x_size", 3*char_width), 
-            ("x_offset", 3*char_width), 
-            ("y_size", 3*char_width), 
-            ("y_offset", 3*char_width), 
-            ("l_size", 3*char_width), # number of data words per image line 
-            ("pixel_format", 2*char_width), 
-            ("tap_geo", 2*char_width), 
-            ("flag", char_width), 
+            ("StreamID", char_width),
+            ("SourceTag", 2 * char_width),
+            ("Xsize", 3 * char_width),
+            ("Xoffs", 3 * char_width),  # horizontal offset in pixels
+            ("Ysize", 3 * char_width),
+            ("Yoffs", 3 * char_width),  # vertical offset in pixels
+            ("DsizeL", 3 * char_width), # number of data words per image line
+            ("PixelF", 2 * char_width),
+            ("TapG", 2 * char_width),   # tap geometry
+            ("Flags", char_width),
         ]
-        assert layout_len(img_header_layout) == n_header_chars*char_width  
+        assert layout_len(img_header_layout) == n_header_chars * char_width
 
         self.sink = Endpoint(word_layout_dchar)
         self.source = Endpoint(pixelword_layout)
@@ -279,21 +279,21 @@ class Frame_Header_Reader(Module):
 
 class End_of_line_Marker(Module):
     def __init__(self):
-        # Assume l_size arrive at least one cycle before pixel data
-        self.l_size = Signal(3*char_width)
+        # Assume words_per_img_line arrive at least one cycle before pixel data
+        self.words_per_img_line = Signal(3*char_width)
 
         self.sink = Endpoint(pixelword_layout)
         self.source = Endpoint(pixelword_layout) 
         
         # # #
 
-        cnt = Signal.like(self.l_size, reset=1)
+        cnt = Signal.like(self.words_per_img_line, reset=1)
         self.sync += [
             If(self.source.ack,
                 self.sink.connect(self.source, omit={"ack", "eop"}),
                 If(self.sink.stb,
                     If(cnt == 1,
-                        cnt.eq(self.l_size)
+                        cnt.eq(self.words_per_img_line)
                     ).Else(
                         cnt.eq(cnt - 1),
                     )
