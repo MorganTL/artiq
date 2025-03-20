@@ -1,4 +1,5 @@
 from numpy import int32, int64, ndarray
+from struct import pack
 
 
 from artiq.language.core import syscall, kernel
@@ -66,11 +67,8 @@ def write_file(data, file_path):
             cxp_grabber.write_file(buffer, "camera_setting.xml")
 
     """
-    byte_arr = bytearray()
-    for d in data:
-        byte_arr += d.to_bytes(4, "big", signed=True)
     with open(file_path, "wb") as binary_file:
-        binary_file.write(byte_arr)
+        binary_file.write(pack(f">{len(data)}i", *data))
 
 
 def write_pgm(frame, file_path, pixel_width):
