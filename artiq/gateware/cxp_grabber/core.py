@@ -254,21 +254,21 @@ class ROICropper(Module):
 
         for i, (pix, roi) in enumerate(zip(pixel_4x, roi_4x)):
             self.sync += [
-                roi.x_good.eq(0),
-                If((self.cfg.x0 <= pix.x) & (pix.x < self.cfg.x1),
-                    roi.x_good.eq(1)
-                ),
-
-                # the 4 pixels are on the same y level, no need for extra calculation
-                If(pix.y == self.cfg.y0,
-                    roi.y_good.eq(1)
-                ),
-                If(pix.y == self.cfg.y1,
-                    roi.y_good.eq(0)
-                ),
                 If(pix.eof,
                     roi.x_good.eq(0),
                     roi.y_good.eq(0)
+                ).Else(
+                    roi.x_good.eq(0),
+                    If((self.cfg.x0 <= pix.x) & (pix.x < self.cfg.x1),
+                        roi.x_good.eq(1)
+                    ),
+                    # the 4 pixels are on the same y level, no need for extra calculation
+                    If(pix.y == self.cfg.y0,
+                        roi.y_good.eq(1)
+                    ),
+                    If(pix.y == self.cfg.y1,
+                        roi.y_good.eq(0)
+                    ),
                 ),
                 roi.gray.eq(pix.gray),
                 roi.stb.eq(pix.stb),
