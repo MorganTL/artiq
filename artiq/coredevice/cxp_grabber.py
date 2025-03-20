@@ -10,11 +10,13 @@ from artiq.experiment import *
 class OutOfSyncException(Exception):
     """Raised when an incorrect number of ROI engine outputs has been
     retrieved from the RTIO input FIFO."""
+
     pass
 
 
 class CXPGrabberTimeoutException(Exception):
     """Raised when a timeout occurs while attempting to read CoaXPress Grabber RTIO input events."""
+
     pass
 
 
@@ -44,6 +46,7 @@ def cxp_download_roi_viewer_frame(
 ) -> TTuple([TInt32, TInt32, TInt32]):
     raise NotImplementedError("syscall not simulated")
 
+
 def write_file(data, file_path):
     """
     Write big endian encoded data to PC
@@ -69,6 +72,7 @@ def write_file(data, file_path):
     with open(file_path, "wb") as binary_file:
         binary_file.write(byte_arr)
 
+
 def write_pgm(frame, file_path, pixel_width):
     """
     Write the frame as PGM file to PC.
@@ -88,7 +92,7 @@ def write_pgm(frame, file_path, pixel_width):
                 # (Read the camera setting XML file for details)
                 cxp_grabber.write32(TRIG_SETTING_ADDR, 0)
                 ...
-                
+
                 # Setup ROI viewer coordinate and start the viewer capture
                 cxp_grabber.start_roi_viewer(0, 0, 32, 64)
 
@@ -98,7 +102,7 @@ def write_pgm(frame, file_path, pixel_width):
                 # Read the frame from roiviewer and write it as a 8 bit PGM image to PC
                 cxp_grabber.read_roi_viewer_frame(frame)
                 write_pgm(frame, "./frame.pgm", 8)
-    
+
     """
     if not isinstance(frame, ndarray):
         raise ValueError("Frame need to be a numpy array")
@@ -118,6 +122,7 @@ def write_pgm(frame, file_path, pixel_width):
         width, height = len(frame[0]), len(frame)
         file.write(f"P5\n{width} {height}\n{max_value}\n".encode("ASCII"))
         file.write(frame.tobytes())
+
 
 class CXPGrabber:
     """Driver for the CoaXPress Grabber camera interface."""
@@ -246,7 +251,9 @@ class CXPGrabber:
             timeout_mu, self.roi_gating_ch
         )
         if timestamp == -1:
-            raise CXPGrabberTimeoutException("Timeout before CoaXPress Grabber frame available")
+            raise CXPGrabberTimeoutException(
+                "Timeout before CoaXPress Grabber frame available"
+            )
         if sentinel != self.sentinel:
             raise OutOfSyncException
 
