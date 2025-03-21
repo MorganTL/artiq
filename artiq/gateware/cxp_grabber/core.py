@@ -185,18 +185,11 @@ class ROI(Module):
                 If((self.cfg.x0 <= pix.x) & (pix.x < self.cfg.x1),
                     roi.x_good.eq(1)
                 ),
-
-                # the 4 pixels are on the same y level, no need for extra calculation
-                If(pix.y == self.cfg.y0,
+                roi.y_good.eq(0),
+                If((self.cfg.y0 <= pix.y) & (pix.y < self.cfg.y1),
                     roi.y_good.eq(1)
                 ),
-                If(pix.y == self.cfg.y1,
-                    roi.y_good.eq(0)
-                ),
-                If(pix.eof,
-                    roi.x_good.eq(0),
-                    roi.y_good.eq(0)
-                ),
+
                 roi.gray.eq(pix.gray),
                 roi.stb.eq(pix.stb),
 
@@ -246,7 +239,6 @@ class ROICropper(Module):
                 ("y_good", 1),
                 ("gray", max_pixel_width),
                 ("stb", 1),
-                ("eof", 1),
             ]) for _ in range(4)
         ]
 
@@ -257,22 +249,13 @@ class ROICropper(Module):
                 If((self.cfg.x0 <= pix.x) & (pix.x < self.cfg.x1),
                     roi.x_good.eq(1)
                 ),
-
-                # the 4 pixels are on the same y level, no need for extra calculation
-                If(pix.y == self.cfg.y0,
+                roi.y_good.eq(0),
+                If((self.cfg.y0 <= pix.y) & (pix.y < self.cfg.y1),
                     roi.y_good.eq(1)
                 ),
-                If(pix.y == self.cfg.y1,
-                    roi.y_good.eq(0)
-                ),
-                If(pix.eof,
-                    roi.x_good.eq(0),
-                    roi.y_good.eq(0)
-                ),
+
                 roi.gray.eq(pix.gray),
                 roi.stb.eq(pix.stb),
-                roi.eof.eq(pix.eof),
-
                 self.source.data[i * max_pixel_width: (i + 1) * max_pixel_width].eq(0),
                 If((self.enable & roi.stb & roi.x_good & roi.y_good),
                     self.source.data[i * max_pixel_width: (i + 1) * max_pixel_width].eq(roi.gray)
@@ -281,14 +264,7 @@ class ROICropper(Module):
 
             # use the first roi for flow control as the first pixel is always available 
             if i == 0:
-                self.sync += [
-                    self.source.stb.eq(0),
-                    self.source.eop.eq(0),
-                    If((self.enable & roi.stb & roi.x_good & roi.y_good),
-                        self.source.stb.eq(roi.stb),
-                        self.source.eop.eq(roi.eof),
-                    ),
-                ]
+                self.sync += self.source.stb.eq(self.enable & roi.stb & roi.x_good & roi.y_good),
 
 
 class ROIViewer(Module, AutoCSR):
