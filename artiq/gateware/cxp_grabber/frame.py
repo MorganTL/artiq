@@ -386,6 +386,8 @@ class PixelCoordinateTracker(Module):
             self.sync += [
                 pix.stb.eq(0),
                 pix.eof.eq(0),
+                pix.x.eq(x_r),
+                pix.y.eq(y_r),
                 If(self.sink.stb,
                     If(self.sink.eop,
                         # new line
@@ -401,8 +403,6 @@ class PixelCoordinateTracker(Module):
                         x_r.eq(x_r + 4),
                     ),
                     pix.stb.eq(self.sink.valid[i]),
-                    pix.x.eq(x_r),
-                    pix.y.eq(y_r),
                     pix.gray.eq(self.sink.data[max_pixel_width*i:max_pixel_width*(i+1)]),
                 )
             ]
