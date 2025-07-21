@@ -4,8 +4,8 @@ from misoc.cores.fir import MACFIR, HBFMACUpsampler
 from misoc.cores.cic import SuperCIC
 from misoc.cores.duc import complex
 
-from mac_hbf_upsampler import MAC_HBF_Upsampler
-from mac_sym_fir import MAC_SYM_FIR
+from artiq.gateware.phaser.mac_hbf_upsampler import MAC_HBF_Upsampler
+from artiq.gateware.phaser.mac_sym_fir import MAC_SYM_FIR
 
 
 class SampleMux(Module):

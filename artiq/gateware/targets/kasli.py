@@ -719,7 +719,7 @@ class GenericMaster(MasterBase):
         if hw_rev is None:
             hw_rev = description["hw_rev"]
         self.class_name_override = description["variant"]
-        has_drtio_over_eem = any(peripheral["type"] == "shuttler" for peripheral in description["peripherals"])
+        has_drtio_over_eem = any(peripheral["type"] in ["shuttler", "phaser_drtio"] for peripheral in description["peripherals"])
         MasterBase.__init__(self,
             hw_rev=hw_rev,
             rtio_clk_freq=description["rtio_frequency"],
@@ -773,7 +773,7 @@ class GenericSatellite(SatelliteBase):
         if hw_rev is None:
             hw_rev = description["hw_rev"]
         self.class_name_override = description["variant"]
-        has_drtio_over_eem = any(peripheral["type"] == "shuttler" for peripheral in description["peripherals"])
+        has_drtio_over_eem = any(peripheral["type"] in ["shuttler", "phaser_drtio"] for peripheral in description["peripherals"])
         SatelliteBase.__init__(self,
                                hw_rev=hw_rev,
                                rtio_clk_freq=description["rtio_frequency"],

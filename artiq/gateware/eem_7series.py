@@ -135,6 +135,16 @@ def peripheral_phaser(module, peripheral, **kwargs):
     eem.Phaser.add_std(module, peripheral["ports"][0],
         peripheral["mode"], **kwargs)
 
+def peripheral_phaser_drtio(module, peripheral, **kwargs):
+    if len(peripheral["ports"]) == 1:
+        port = peripheral["ports"][0]
+        port_aux = None
+    elif len(peripheral["ports"]) == 2:
+        port, port_aux = peripheral["ports"]
+    else:
+        raise ValueError("wrong number of ports")
+    
+    eem.Phaser_DRTIO.add_std(module, port, port_aux, **kwargs)
 
 def peripheral_hvamp(module, peripheral, **kwargs):
     if len(peripheral["ports"]) != 1:
@@ -164,6 +174,7 @@ peripheral_processors = {
     "mirny": peripheral_mirny,
     "fastino": peripheral_fastino,
     "phaser": peripheral_phaser,
+    "phaser_drtio": peripheral_phaser_drtio,
     "hvamp": peripheral_hvamp,
     "shuttler": peripheral_shuttler,
 }

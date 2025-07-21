@@ -17,8 +17,22 @@ class Phy(Module):
         ]
 
 
+
+### Interpolation Module
+###### 125 MHz Generated sample(May not be able to reach that 250MHz speed) -> 250MHz
+###### 
+###### Can Reuse Decode -> which is also the interpolation logic
+###### 
 class DDSChannel(Module):
     def __init__(self, share_lut=None):
+
+        # DDS Input
+        # f: Frequency
+        # p: Phaser
+        # a: amplitude
+        # clr: clear but
+        # o: Complex i and q
+
         to_rio_phy = ClockDomainsRenamer("rio_phy")
         self.submodules.dds = to_rio_phy(MultiDDS(
             n=5, fwidth=32, xwidth=16, z=19, zl=10, share_lut=share_lut))
@@ -33,6 +47,10 @@ class Base(Module):
             rtlink.OInterface(data_width=8, address_width=8,
                               enable_replace=False),
             rtlink.IInterface(data_width=10))
+
+        # HEADER and construction logic structure should be kept 
+        # BODY is the data we want.
+
 
         # share a CosSinGen LUT between the two channels
         self.submodules.ch0 = DDSChannel()

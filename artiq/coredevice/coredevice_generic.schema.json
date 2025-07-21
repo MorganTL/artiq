@@ -146,7 +146,7 @@
             "properties": {
                 "type": {
                     "type": "string",
-                    "enum": ["dio", "dio_spi", "urukul", "novogorny", "sampler", "suservo", "zotino", "grabber", "mirny", "fastino", "phaser", "hvamp", "shuttler", "coaxpress_sfp"]
+                    "enum": ["dio", "dio_spi", "urukul", "novogorny", "sampler", "suservo", "zotino", "grabber", "mirny", "fastino", "phaser", "phaser_drtio", "hvamp", "shuttler", "coaxpress_sfp"]
                 },
                 "board": {
                     "type": "string"
@@ -607,6 +607,35 @@
                     "required": ["ports"]
                 }
             }, {
+                "title": "Phaser_DRTIO",
+                "if": {
+                    "properties": {
+                        "type": {
+                            "const": "phaser_drtio"
+                        }
+                    }
+                },
+                "then": {
+                    "properties": {
+                        "ports": {
+                            "type": "array",
+                            "items": {
+                                "type": "integer"
+                            },
+                            "minItems": 1,
+                            "maxItems": 2
+                        },
+                        "drtio_destination": {
+                            "type": "integer"
+                        },
+                        "hw_rev": {
+                            "type": "string",
+                            "enum": ["v1.0", "v1.1"]
+                        }
+                    },
+                    "required": ["ports"]
+                    }
+                },  {
                 "title": "HVAmp",
                 "if": {
                     "properties": {

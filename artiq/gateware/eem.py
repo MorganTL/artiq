@@ -766,6 +766,37 @@ class HVAmp(_EEM):
             target.submodules += phy
             target.rtio_channels.append(rtio.Channel.from_phy(phy))
 
+class Phaser_DRTIO(_EEM):
+    @staticmethod
+    def io(eem, iostandard):
+        # Master: Pair 0~3 data IN, 4~7 OUT
+        data_in = ("phaser{}_drtio_rx".format(eem), 0,
+            Subsignal("p", Pins("{} {} {} {}".format(*[
+                _eem_pin(eem, i, "p") for i in range(4)
+            ]))),
+            Subsignal("n", Pins("{} {} {} {}".format(*[
+                _eem_pin(eem, i, "n") for i in range(4)
+            ]))),
+            iostandard(eem),
+            Misc("DIFF_TERM=TRUE"),
+        )
+
+        data_out = ("phaser{}_drtio_tx".format(eem), 0,
+            Subsignal("p", Pins("{} {} {} {}".format(*[
+                _eem_pin(eem, i, "p") for i in range(4, 8)
+            ]))),
+            Subsignal("n", Pins("{} {} {} {}".format(*[
+                _eem_pin(eem, i, "n") for i in range(4, 8)
+            ]))),
+            iostandard(eem),
+        )
+
+        return [data_in, data_out]
+    
+    @classmethod
+    def add_std(cls, target, eem, eem_aux, iostandard=default_iostandard):
+        cls.add_extension(target, eem, is_drtio_over_eem=True, iostandard=iostandard)
+        target.eem_drtio_channels.append((target.platform.request("phaser{}_drtio_rx".format(eem), 0), target.platform.request("phaser{}_drtio_tx".format(eem), 0)))
 
 class Shuttler(_EEM):
     @staticmethod
