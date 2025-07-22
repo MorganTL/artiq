@@ -17,10 +17,10 @@ from artiq.gateware.rtio.phy import spi2 as rtio_spi
 from artiq.gateware.drtio.transceiver import eem_serdes
 from artiq.gateware.drtio.rx_synchronizer import NoRXSynchronizer
 from artiq.gateware.drtio import *
-from artiq.gateware.phaser.phaser import Phaser
+from artiq.gateware.phaser import NeoPhaser
 from artiq.build_soc import *
 
-# TEMP
+# TODO
 from migen.genlib.io import DifferentialOutput
 
 
@@ -32,14 +32,14 @@ class Satellite(BaseSoC, AMPSoC):
     }
     mem_map.update(BaseSoC.mem_map)
 
-    def __init__(self, gateware_identifier_str=None, **kwargs):
+    def __init__(self, clk_freq=125e6, gateware_identifier_str=None, **kwargs):
         BaseSoC.__init__(self,
             cpu_type="vexriscv",
             cpu_bus_width=64,
             sdram_controller_type="minicon",
             l2_size=128*1024,
             l2_line_size=64,
-            clk_freq=125e6,
+            clk_freq=clk_freq,
             **kwargs)
         AMPSoC.__init__(self)
         add_identifier(self, gateware_identifier_str=gateware_identifier_str)
@@ -63,17 +63,6 @@ class Satellite(BaseSoC, AMPSoC):
         data_pads = [
             (platform.request("drtio_rx"), platform.request("drtio_tx"))
         ]
-
-        test_eem_output = [
-            ("test_eem_out", 0,
-                Subsignal("p", Pins("eem1:d0_cc_p eem1:d1_p eem1:d2_p eem1:d3_p eem1:d4_p eem1:d5_p eem1:d6_p eem1:d7_p")),
-                Subsignal("n", Pins("eem1:d0_cc_n eem1:d1_n eem1:d2_n eem1:d3_n eem1:d4_n eem1:d5_n eem1:d6_n eem1:d7_n")),
-                IOStandard("LVDS_25"),
-            ),
-        ]
-        platform.add_extension(test_eem_output)
-        test_eem_pads = platform.request("test_eem_out")
-
 
         self.submodules.eem_transceiver = eem_serdes.EEMSerdes(self.platform, data_pads)
         self.csr_devices.append("eem_transceiver")
@@ -103,7 +92,7 @@ class Satellite(BaseSoC, AMPSoC):
         self.add_memory_group("drtioaux_mem", ["drtioaux0_mem"])
 
         # Async reset gateware if data lane is idle
-        self.comb += self.crg.reset.eq(self.eem_transceiver.rst)
+        # self.comb += self.crg.reset.eq(self.eem_transceiver.rst)
 
         fix_serdes_timing_path(platform)
 
@@ -118,81 +107,68 @@ class Satellite(BaseSoC, AMPSoC):
             self.submodules += phy
             self.rtio_channels.append(rtio.Channel.from_phy(phy))
  
-        # FIXME All registers in sys2x are static. There is no CDC problem
-        platform.add_false_path_constraints(self.crg.cd_sys.clk, self.crg.cd_sys2x.clk)
-        platform.add_false_path_constraints(self.crg.cd_sys2x.clk, self.crg.cd_sys.clk)
+        self.submodules.phaser = phaser = NeoPhaser(
+            [platform.request("att_rstn", i) for i in range(2)],
+            platform.request("dac_data"),
+            platform.request("dac_ctrl"),
+            clk_freq,
+        )
+        print("PHASER PHYS at RTIO channel 0x{:06x}".format(len(self.rtio_channels)))
+        self.rtio_channels.extend(rtio.Channel.from_phy(phy) for phy in phaser.phys)
 
-        self.submodules.phaser = Phaser(self.platform)
-        print("PHASER Config at RTIO channel 0x{:06x}".format(len(self.rtio_channels)))
-        self.rtio_channels.extend(rtio.Channel.from_phy(phy) for phy in self.phaser.phys)
-
-        dac_spi = rtio_spi.SPIMaster(self.platform.request("dac_spi"))
-        self.submodules += dac_spi
-        print("PHASER DAC_SPI at RTIO channel 0x{:06x}".format(len(self.rtio_channels)))
-        self.rtio_channels.append(rtio.Channel.from_phy(dac_spi))
-
-        att_spi_pads = []
-
-        trf0_spi = rtio_spi.SPIMaster(self.platform.request("trf_spi", 0))
-        self.submodules += trf0_spi
-        print("PHASER TRF0 at RTIO channel 0x{:06x}".format(len(self.rtio_channels)))
-        self.rtio_channels.append(rtio.Channel.from_phy(trf0_spi))
-
-        att_spi_pads.append(self.platform.request("att_spi", 0))
-        att_spi_pads.append(self.platform.request("att_spi", 1))
-
-        att0_spi = rtio_spi.SPIMaster(att_spi_pads[0])
-        self.submodules += att0_spi
-        print("PHASER ATT0 at RTIO channel 0x{:06x}".format(len(self.rtio_channels)))
-        self.rtio_channels.append(rtio.Channel.from_phy(att0_spi))
-
-        trf1_spi = rtio_spi.SPIMaster(self.platform.request("trf_spi", 1))
-        self.submodules += trf1_spi
-        print("PHASER TRF1 at RTIO channel 0x{:06x}".format(len(self.rtio_channels)))
-        self.rtio_channels.append(rtio.Channel.from_phy(trf1_spi))
-
-        att1_spi = rtio_spi.SPIMaster(att_spi_pads[1])
-        self.submodules += att1_spi
-        print("PHASER ATT1 at RTIO channel 0x{:06x}".format(len(self.rtio_channels)))
-        self.rtio_channels.append(rtio.Channel.from_phy(att1_spi))
+        # TODO: reset sys2x / sys4x with rio?
+        # No, cuz sys4x was used by sdram
 
 
-        # for i in range(2):
-        #     setattr(self, f"trf{i}_spi", rtio_spi.SPIMaster(
-        #         platform.request("trf_spi", i)
-        #     ))
-        #     self.submodules += getattr(self, f"trf{i}_spi")
-        #     print("PHASER TRF{:01x} at RTIO channel 0x{:06x}".format(i, len(self.rtio_channels)))
-        #     self.rtio_channels.append(rtio.Channel.from_phy(getattr(self, f"trf{i}_spi")))
-
-        #     att_spi_pads.append(platform.request("att_spi", i))
-
-        #     setattr(self, f"att{i}_spi", rtio_spi.SPIMaster(
-        #         att_spi_pads[i]
-        #     ))
-        #     self.submodules += getattr(self, f"att{i}_spi")
-        #     print("PHASER ATT{:01x} at RTIO channel 0x{:06x}".format(i, len(self.rtio_channels)))
-        #     self.rtio_channels.append(rtio.Channel.from_phy(getattr(self, f"att{i}_spi")))
-
-        att0_spi_pads = att_spi_pads[0]
-
-        self.specials += [
-            DifferentialOutput(att0_spi_pads.clk, test_eem_pads.p[0], test_eem_pads.n[0]),
-            DifferentialOutput(att0_spi_pads.miso, test_eem_pads.p[1], test_eem_pads.n[1]),
-            DifferentialOutput(att0_spi_pads.mosi, test_eem_pads.p[2], test_eem_pads.n[2]),
-            DifferentialOutput(att0_spi_pads.cs_n, test_eem_pads.p[3], test_eem_pads.n[3]),
-            DifferentialOutput(self.phaser.logic.att_rstn[0], test_eem_pads.p[4], test_eem_pads.n[4]),
-            DifferentialOutput(self.phaser.base.ch0.dds.valid, test_eem_pads.p[5], test_eem_pads.n[5]),
-            DifferentialOutput(self.phaser.logic.interpolation.stb, test_eem_pads.p[6], test_eem_pads.n[6]),
-            DifferentialOutput(self.phaser.logic.interpolation.zoh.sample_stb, test_eem_pads.p[7], test_eem_pads.n[7]),
+        # TODO: remove those RTIOSPI, use spi2 instead and connect via rtiophy instead
+        spi_pins = [
+            platform.request("dac_spi"),
+            platform.request("trf_spi", 0),
+            platform.request("trf_spi", 1),
+            platform.request("att_spi", 0),
+            platform.request("att_spi", 1),
         ]
 
-        # self.comb += [
-        #     att0_spi_pads.clk.eq(test_eem_pads[0]),
-        #     att0_spi_pads.miso.eq(test_eem_pads[1]),
-        #     att0_spi_pads.mosi.eq(test_eem_pads[2]),
-        #     att0_spi_pads.cs_n.eq(test_eem_pads[2]),
-        # ]
+        for pin in spi_pins:
+            spimaster = rtio_spi.SPIMaster(pin)
+            self.submodules += spimaster
+            print("PHASER {} at RTIO channel 0x{:06x}".format(pin.name.upper(), len(self.rtio_channels)))
+            self.rtio_channels.append(rtio.Channel.from_phy(spimaster))
+
+        # TODO: remove
+        test_eem_output = [
+            ("debug_eem1", 0,
+                Subsignal("d0_cc_p", Pins("eem1:d0_cc_p")),
+                Subsignal("d0_cc_n", Pins("eem1:d0_cc_n")),
+                Subsignal("d1_p", Pins("eem1:d1_p")),
+                Subsignal("d1_n", Pins("eem1:d1_n")),
+                Subsignal("d2_p", Pins("eem1:d2_p")),
+                Subsignal("d2_n", Pins("eem1:d2_n")),
+                Subsignal("d3_p", Pins("eem1:d3_p")),
+                Subsignal("d3_n", Pins("eem1:d3_n")),
+                Subsignal("d4_p", Pins("eem1:d4_p")),
+                Subsignal("d4_n", Pins("eem1:d4_n")),
+                Subsignal("d5_p", Pins("eem1:d5_p")),
+                Subsignal("d5_n", Pins("eem1:d5_n")),
+                Subsignal("d6_p", Pins("eem1:d6_p")),
+                Subsignal("d6_n", Pins("eem1:d6_n")),
+                Subsignal("d7_p", Pins("eem1:d7_p")),
+                Subsignal("d7_n", Pins("eem1:d7_n")),
+                IOStandard("LVCMOS25"),
+            ),
+        ]
+        platform.add_extension(test_eem_output)
+        
+        # TODO: connect dac spi to debug_eem
+        eem_1 = platform.request("debug_eem1")
+        dac_pin = spi_pins[0]
+        self.sync += [
+            eem_1.d0_cc_p.eq(dac_pin.clk), # Y18
+            eem_1.d0_cc_n.eq(dac_pin.miso), # Y19, SDO
+            eem_1.d1_p.eq(dac_pin.mosi), # AA19, SDIO
+            eem_1.d1_n.eq(dac_pin.cs_n), # AB20, SDENB
+        ]
+        
 
 
         error_led = self.platform.request("user_led", 5)
