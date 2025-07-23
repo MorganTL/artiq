@@ -9,10 +9,12 @@ from itertools import count, filterfalse
 from artiq import __version__ as artiq_version
 from artiq.coredevice import jsondesc
 from artiq.coredevice.phaser import PHASER_GW_MIQRO, PHASER_GW_BASE
+from artiq.coredevice.phaser_drtio import PHASER_GW_DRTIO
 
+DRTIO_EEM_PERIPHERALS = ["shuttler", "phaser_drtio"]
 
 def get_cpu_target(description):
-    if description.get("type", None) == "shuttler":
+    if description.get("type", None) in DRTIO_EEM_PERIPHERALS:
         return "rv32g"
     if description["target"] == "kasli":
         if description["hw_rev"] in ("v1.0", "v1.1"):
@@ -761,6 +763,66 @@ class PeripheralManager:
             channel=rtio_offset)
         return 3
 
+    def process_phaser_drtio(self, peripheral):
+        phaser_name = self.get_name("phaser_drtio")
+        rtio_offset = peripheral["drtio_destination"] << 16
+        rtio_offset += self.add_board_leds(
+            rtio_offset, board_name=phaser_name, num_leds=5
+        )
+
+        channel = count(0)
+        self.gen(
+            """
+            device_db["{name}_base"] = {{
+                "type": "local",
+                "module": "artiq.coredevice.phaser_drtio",
+                "class": "Phaser",
+                "arguments": {{
+                    "channel": 0x{channel:06x},
+                    "gw_rev": {gw_rev}
+                }}
+            }}""",
+            name=phaser_name,
+            channel=rtio_offset + next(channel),
+            gw_rev=PHASER_GW_DRTIO,
+        )
+        for ch in range(2):
+            self.gen(
+                """
+                device_db["{name}_channel{ch}"] = {{
+                    "type": "local",
+                    "module": "artiq.coredevice.phaser_drtio",
+                    "class": "PhaserChannel",
+                    "arguments": {{
+                        "channel": 0x{channel:06x},
+                    }}
+                }}""",
+                name=phaser_name,
+                ch=ch,
+                channel=rtio_offset + next(channel),
+            )
+        device_class_names = [
+            "dac_spi",
+            "trf_spi0",
+            "trf_spi1",
+            "att_spi0",
+            "att_spi1",
+        ]
+        for ch, device_name in enumerate(device_class_names):
+            spi_name = "{name}_spi{ch}".format(name=phaser_name, ch=ch)
+            self.gen(
+                """
+                device_db["{spi}"] = {{
+                    "type": "local",
+                    "module": "artiq.coredevice.spi2",
+                    "class": "SPIMaster",
+                    "arguments": {{"channel": 0x{channel:06x}}},
+                }}""",
+                spi=spi_name,
+                channel=rtio_offset + next(channel),
+            )
+        return 0
+
     def process(self, rtio_offset, peripheral):
         processor = getattr(self, "process_"+str(peripheral["type"]))
         return processor(rtio_offset, peripheral)
@@ -784,8 +846,7 @@ class PeripheralManager:
 
 
 def split_drtio_eem(peripherals):
-    # Shuttler is the only peripheral that uses DRTIO-over-EEM at this moment
-    drtio_eem_filter = lambda peripheral: peripheral["type"] == "shuttler"
+    drtio_eem_filter = lambda peripheral: peripheral["type"] in DRTIO_EEM_PERIPHERALS
     return filterfalse(drtio_eem_filter, peripherals), \
         list(filter(drtio_eem_filter, peripherals))
 
