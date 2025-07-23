@@ -627,10 +627,6 @@
                         },
                         "drtio_destination": {
                             "type": "integer"
-                        },
-                        "hw_rev": {
-                            "type": "string",
-                            "enum": ["v1.0", "v1.1"]
                         }
                     },
                     "required": ["ports"]
