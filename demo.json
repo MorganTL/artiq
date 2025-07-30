@@ -1,0 +1,49 @@
+{
+  "core_addr": "192.168.1.14",
+  "target": "kasli",
+  "variant": "demo",
+  "hw_rev": "v2.0",
+  "base": "master",
+  "enable_wrpll": false,
+  "peripherals": [
+    {
+      "type": "phaser_drtio",
+      "gateware_variant": "mtdds",
+      "hardware_variant": "upconverter",
+      "tones": 26,
+      "dds_bandwidth": 250e6,
+      "ports": [
+        2
+      ]
+    },
+    {
+      "type": "phaser_drtio",
+      "gateware_variant": "mtdds",
+      "hardware_variant": "baseband",
+      "tones": 26,
+      "dds_bandwidth": 250e6,
+      "ports": [
+        3
+      ]
+    },
+    {
+      "type": "dio",
+      "board": "DIO_SMA",
+      "ports": [
+        4
+      ],
+      "edge_counter": false,
+      "bank_direction_low": "output",
+      "bank_direction_high": "output"
+    },
+    {
+      "type": "mirny",
+      "almazny": false,
+      "ports": [
+        5
+      ],
+      "clk_sel": "mmcx",
+      "refclk": 125e6
+    }
+  ]
+}
