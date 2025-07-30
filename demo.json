@@ -1,0 +1,16 @@
+{
+  "core_addr": "192.168.1.14",
+  "target": "kasli",
+  "variant": "demo",
+  "hw_rev": "v2.0",
+  "base": "master",
+  "enable_wrpll": false,
+  "peripherals": [
+    {
+      "type": "phaser_drtio",
+      "ports": [
+        2
+      ]
+    }
+  ]
+}

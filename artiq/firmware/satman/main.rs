@@ -141,6 +141,7 @@ fn process_aux_packet(dmamgr: &mut DmaManager, analyzer: &mut Analyzer, kernelmg
 ) -> Result<(), drtioaux::Error<!>> {
     // In the code below, *_chan_sel_write takes an u8 if there are fewer than 256 channels,
     // and u16 otherwise; hence the `as _` conversion.
+    info!("received {:?}" ,packet);
     match packet {
         drtioaux::Packet::EchoRequest =>
             drtioaux::send(0, &drtioaux::Packet::EchoReply),
@@ -773,6 +774,7 @@ fn init_rtio_crg() { }
 fn hardware_tick(ts: &mut u64) {
     let now = clock::get_ms();
     if now > *ts {
+        info!("watchdog");
         #[cfg(has_grabber)]
         board_artiq::grabber::tick();
         *ts = now + 200;

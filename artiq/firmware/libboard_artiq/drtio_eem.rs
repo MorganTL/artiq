@@ -211,23 +211,27 @@ pub fn init() {
             csr::eem_transceiver::transceiver_sel_write(trx_no as u8);
         }
 
-        let key = format!("eem_drtio_delay{}", trx_no);
-        config::read(&key, |r| {
-            match r {
-                Ok(record) => {
-                    info!("loading calibrated timing values from flash");
-                    unsafe {
-                        apply_config(&*(record.as_ptr() as *const SerdesConfig));
-                    }
-                },
+        // TODO: remove
+        info!("calibrating...");
+        unsafe { assign_delay() };
 
-                Err(_) => {
-                    info!("calibrating...");
-                    let config = unsafe { assign_delay() };
-                    config::write(&key, config.as_bytes()).unwrap();
-                }
-            }
-        });
+        // let key = format!("eem_drtio_delay{}", trx_no);
+        // config::read(&key, |r| {
+        //     match r {
+        //         Ok(record) => {
+        //             info!("loading calibrated timing values from flash");
+        //             unsafe {
+        //                 apply_config(&*(record.as_ptr() as *const SerdesConfig));
+        //             }
+        //         },
+
+        //         Err(_) => {
+        //             info!("calibrating...");
+        //             let config = unsafe { assign_delay() };
+        //             config::write(&key, config.as_bytes()).unwrap();
+        //         }
+        //     }
+        // });
 
         unsafe { align_comma(); }
     }
