@@ -1,0 +1,26 @@
+{
+  "core_addr": "192.168.1.14",
+  "target": "kasli",
+  "variant": "demo",
+  "hw_rev": "v2.0",
+  "base": "master",
+  "enable_wrpll": false,
+  "peripherals": [
+    {
+      "type": "phaser_drtio",
+      "gateware_variant": "mtdds",
+      "hardware_variant": "baseband",
+      "tones": 26,
+      "dds_bandwidth": 250e6,
+      "ports": [
+        2
+      ]
+    },
+    {
+      "type": "zotino",
+      "ports": [
+        3
+      ]
+    }
+  ]
+}

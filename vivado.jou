@@ -1,0 +1,27 @@
+#-----------------------------------------------------------
+# Vivado v2024.2 (64-bit)
+# SW Build 5239630 on Fri Nov 08 22:34:34 MST 2024
+# IP Build 5239520 on Sun Nov 10 16:12:51 MST 2024
+# SharedData Build 5239561 on Fri Nov 08 14:39:27 MST 2024
+# Start of session at: Fri Nov  7 12:16:05 2025
+# Process ID         : 718850
+# Current directory  : /home/morgan/dev/artiq-phaser-adc
+# Command line       : vivado
+# Log file           : /home/morgan/dev/artiq-phaser-adc/vivado.log
+# Journal file       : /home/morgan/dev/artiq-phaser-adc/vivado.jou
+# Running On         : hestia
+# Platform           : unknown
+# Operating System   : unknown
+# Processor Detail   : Intel(R) Core(TM) i9-9900K CPU @ 3.60GHz
+# CPU Frequency      : 4701.693 MHz
+# CPU Physical cores : 8
+# CPU Logical cores  : 16
+# Host memory        : 33507 MB
+# Swap memory        : 0 MB
+# Total Virtual      : 33507 MB
+# Available Virtual  : 26594 MB
+#-----------------------------------------------------------
+start_gui
+open_checkpoint /home/morgan/dev/artiq-phaser-adc/artiq_phaser/mtdds/gateware/top_route.dcp
+show_objects -name cnvn [get_nets -hierarchical -top_net_of_hierarchical_group "*" ]
+show_objects -name clkout [get_nets -hierarchical -top_net_of_hierarchical_group "*" ]

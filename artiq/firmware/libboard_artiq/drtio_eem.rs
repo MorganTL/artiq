@@ -140,7 +140,7 @@ unsafe fn assign_delay() -> SerdesConfig {
         delay_list[lane_no] = min_idx;
     }
 
-    debug!("setup/hold timing calibration: {:?}", delay_list);
+    info!("setup/hold timing calibration: {:?}", delay_list);
 
     SerdesConfig {
         delay: delay_list,
@@ -177,7 +177,7 @@ unsafe fn align_comma() {
             clock::spin_us(100);
 
             if csr::eem_transceiver::comma_read() == 1 {
-                debug!("comma alignment completed after {} bitslips", slip);
+                info!("comma alignment completed after {} bitslips", slip);
                 return;
             }
         }
@@ -197,7 +197,7 @@ pub unsafe fn align_wordslip(trx_no: u8) -> bool {
         clock::spin_us(100);
 
         if csr::eem_transceiver::comma_read() == 1 {
-            debug!("comma alignment completed with {} wordslip", slip);
+            info!("comma alignment completed with {} wordslip", slip);
             return true;
         }
     }
@@ -212,22 +212,25 @@ pub fn init() {
         }
 
         let key = format!("eem_drtio_delay{}", trx_no);
-        config::read(&key, |r| {
-            match r {
-                Ok(record) => {
-                    info!("loading calibrated timing values from flash");
-                    unsafe {
-                        apply_config(&*(record.as_ptr() as *const SerdesConfig));
-                    }
-                },
+        // config::read(&key, |r| {
+        //     match r {
+        //         Ok(record) => {
+        //             info!("loading calibrated timing values from flash");
+        //             unsafe {
+        //                 apply_config(&*(record.as_ptr() as *const SerdesConfig));
+        //             }
+        //         },
 
-                Err(_) => {
-                    info!("calibrating...");
-                    let config = unsafe { assign_delay() };
-                    config::write(&key, config.as_bytes()).unwrap();
-                }
-            }
-        });
+        //         Err(_) => {
+        //             info!("calibrating...");
+        //             let config = unsafe { assign_delay() };
+        //             config::write(&key, config.as_bytes()).unwrap();
+        //         }
+        //     }
+        // });
+        info!("calibrating...");
+        let config = unsafe { assign_delay() };
+        config::write(&key, config.as_bytes()).unwrap();
 
         unsafe { align_comma(); }
     }
